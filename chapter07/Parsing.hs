@@ -42,6 +42,15 @@ item = P (\inp -> case inp of
 parse :: Parser a -> String -> [(a,String)]
 parse (P p) inp = p inp
 
+
+-- Sequencing
+
+-- p:: Parser (Char, Char)
+-- p= do x <-item
+--       item
+--       y<-item
+--       return (x,y)
+
 -- Choice
 ------
 
@@ -71,6 +80,7 @@ letter = sat isAlpha
 alphanum :: Parser Char
 alphanum = sat isAlphaNum
 
+-- type? 
 char :: Char -> Parser Char
 char x = sat (== x)
 
@@ -80,6 +90,14 @@ string (x:xs) = do
   char x
   string xs
   return (x:xs)
+
+p :: Parser String
+p = do char '['
+       d  <- digit
+       ds <- many (do char ',' 
+                      digit)
+       char ']'
+       return (d:ds)
 
 many :: Parser a -> Parser [a]
 many p = many1 p +++ return []
@@ -117,13 +135,42 @@ comment = do
   many (sat (/= '\n'))
   return ()
 
-expr :: Parser Int
-expr = do
-  n <- nat
-  ns <- many
-          (do char '-'
-              nat)
-  return (foldl (-) n ns)
+-- expr :: Parser Int
+-- expr = do
+--   n <- nat
+--   ns <- many
+--           (do char '-'
+--               nat)
+--   return (foldl (-) n ns)
+
+
+expr::Parser Int
+expr =do t <- term
+         do char '+'
+            e<-expr
+            return (t+e)
+          +++ return t
+
+
+term :: Parser Int
+term = do f <- factor
+          do char '*'
+             t <- term
+             return (f*t)
+           +++ return f
+
+factor:: Parser Int
+factor = do d<-digit
+            return (digitToInt d)
+          +++ do char '('
+                 e <- expr
+                 char ')'
+                 return e
+
+
+
+eval :: String -> Int
+eval xs = fst (head (parse expr xs))
 
 -- Ignoring spacing
 ----------------
